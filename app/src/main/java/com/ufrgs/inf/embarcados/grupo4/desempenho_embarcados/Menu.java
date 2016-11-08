@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -14,32 +15,40 @@ import java.util.List;
 public class Menu extends AppCompatActivity {
 
     public Button btn_calc;
-    public TextView txt_result, txt_err, txt_step;
+    public TextView txt_result, txt_err, txt_time;
+    public EditText edt_step;
     public Spinner spn_func, spn_mtd;
 
     private List<String> mtdList, funcList, stepList;
 
     private int function=0;
-    private double[] intResult = {1.5708,  500.137681127712};
+    private double[] intResult =
+            {0.5 ,  2.4785, 10, 30937.5};
+    private double[] intervalMin = {0, .0001, 0, 0},
+                     intervalMax = {100, Math.PI/2, 10, 5};
     private void integrate(){
         function = spn_func.getSelectedItemPosition();
         int mtd = spn_mtd.getSelectedItemPosition();
-        int steps = Integer.parseInt(txt_step.getText().toString());
+        int steps = Integer.parseInt(edt_step.getText().toString());
         double result;
 
+        long startTime = System.nanoTime();
         switch (mtd){
             case 0:
-                result = intgTrapezio(0, 100, steps);
+                result = intgTrapezio(intervalMin[function], intervalMax[function], steps);
                 break;
             case 1:
             default:
-                result = intgSimpsons(0, 100, steps);
+                result = intgSimpsons(intervalMin[function], intervalMax[function], steps);
                 break;
         }
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
 
+        txt_result.setText(String.format("%3.3e", result));
+        txt_err.setText(String.format("%3.3e",intResult[function]-result));
+        txt_time.setText(String.format("%3.3e",duration/1000000.0f));
 
-        txt_result.setText(String.format("%6.6e", result));
-        txt_err.setText(String.format("%6.6e",intResult[function]-result));
     }
 
     private double f(double x){
@@ -47,17 +56,29 @@ public class Menu extends AppCompatActivity {
             case 0:
                 return exp(x);
             case 1:
+                return sine(x);
+            case 2:
+                return one(x);
+            case 3:
             default:
-                return other(x);
+                return largePoly(x);
         }
     }
 
-    private double other(double x) {
-        return Math.sin(x)+5;
+    private double sine(double x) {
+        return Math.sin(1/x)+1;
     }
 
     private double exp(double x) {
-        return Math.exp(- (x * x) / 2) / Math.sqrt(2 * Math.PI);
+        return Math.exp(- x * x / 2) / Math.sqrt(2 * Math.PI);
+    }
+
+    private double one(double x) {
+        return 1;
+    }
+
+    private double largePoly(double x){
+        return 30*Math.pow(x, 5) - 166*Math.pow(x, 4) - 542*Math.pow(x, 3) + 2838*Math.pow(x, 2) + 1520*x + 800;
     }
 
     private double intgTrapezio(double a, double b, int N) {
@@ -106,7 +127,9 @@ public class Menu extends AppCompatActivity {
 
         txt_err = (TextView) findViewById(R.id.txt_err);
         txt_result = (TextView) findViewById(R.id.txt_result);
-        txt_step = (TextView) findViewById(R.id.txt_step);
+        txt_time = (TextView) findViewById(R.id.txt_time);
+
+        edt_step = (EditText) findViewById(R.id.edt_steps);
 
         // populate spinners
         spn_mtd = (Spinner) findViewById(R.id.spinner_mtd);
@@ -119,8 +142,10 @@ public class Menu extends AppCompatActivity {
 
         spn_func = (Spinner)findViewById(R.id.spinner_func);
         funcList = new ArrayList<>();
-        funcList.add("normal");
-        funcList.add("seno+5");
+        funcList.add("normal [0;100]");
+        funcList.add("seno(1/x)+1 [0;PI/2]");
+        funcList.add("1 [0;10]");
+        funcList.add("large Poly [0;5]");
 
         ArrayAdapter<String> funcAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, funcList);
         spn_func.setAdapter(funcAdapter);
